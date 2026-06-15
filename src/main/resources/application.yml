@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: pindrop
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pindrop
+    username: pindrop_user
+    password: secret_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatycznie tworzy/modyfikuje tabele na podstawie kodu Javy
+    show-sql: true # Pokazuje w konsoli zapytania SQL (świetne do debugowania)
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
