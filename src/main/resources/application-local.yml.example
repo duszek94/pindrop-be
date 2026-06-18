@@ -1,0 +1,19 @@
+# Copy to application-local.yml in the project root (gitignored) for local development secrets.
+# Environment variables override these values when set.
+
+spring:
+  datasource:
+    password: pindrop123
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: your-google-client-id
+            client-secret: your-google-client-secret
+
+app:
+  jwt:
+    # Base64-encoded 256-bit key for local dev only
+    secret: cGluZHJvcC1kZXYtc2VjcmV0LWtleS0yNTZiaXRzISE=

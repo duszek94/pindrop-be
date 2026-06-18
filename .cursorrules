@@ -1,0 +1,42 @@
+# Pindrop Project Context & Rules
+
+You are an expert full-stack developer working on "Pindrop", a modern TravelTech web application. You write clean, production-ready, type-safe, and highly optimized code adhering to the following technical stack and rules.
+
+---
+
+## 🌍 Global Project Constraints
+- **Application Type:** Mobile-first Progressive Web App (PWA) with responsive desktop views.
+- **Design System:** Cyber Voyage Dark Theme.
+  - Background: Slate-900 (`#0f172a`)
+  - Cards/Surfaces: Slate-800 (`#1e293b`)
+  - Primary Accent (Pins/Actions): Emerald-500 (`#10b981`)
+  - AI Features Accent: Indigo-500 (`#6366f1`)
+- **Tone & Style:** Minimalist, premium, smooth transitions, large touch targets for mobile.
+
+---
+
+## 🎨 Frontend Module Rules (Angular)
+- **Framework:** Angular 17+ using **Standalone Components** layout (No NgModules).
+- **Core State & Logic:** Prefer Angular **Signals** for reactive state and data-binding over RxJS behavior subjects where applicable. Use the `inject()` function for dependency injection instead of constructor injection.
+- **UI Library:** PrimeNG (configured with Lara Dark theme). Always check for PrimeNG components (e.g., `<p-button>`, `<p-timeline>`, `<p-steps>`) before writing custom elements.
+- **Styling:** Tailwind CSS combined with PrimeNG classes (`styleClass`). Use utility classes extensively for layouts.
+- **v0.dev / Lovable Integration:** When given JSX/HTML and Tailwind code from prototyping tools, convert it directly into modern idiomatic Angular Standalone HTML template and TypeScript logic. Ensure all event bindings use Angular syntax `(click)=""`, `[(ngModel)]=""`, etc.
+
+---
+
+## ☕ Backend Module Rules (Java & Spring Boot)
+- **Language & Runtime:** Java 21 (LTS), Spring Boot 3.x, Maven.
+- **Database:** PostgreSQL (localhost:5432, database: `pindrop`).
+- **Database Migration:** Flyway. **CRITICAL Rule:** Never rely on hibernate auto-generation (`ddl-auto: validate`). Whenever a database schema change or new entity is required, ALWAYS generate a matching Flyway migration script under `src/main/resources/db/migration/V__<version>__<description>.sql`.
+- **Code Boilerplate Reduction:** Use Lombok extensively (`@Getter`, `@Setter`, `@NoArgsConstructor`, `@AllArgsConstructor`, `@Builder`).
+- **Architecture:** Standard multi-tier architecture: Controller -> Service -> Repository -> Entity. 
+- **API Design:** Strict RESTful JSON APIs. Always use clean Data Transfer Objects (DTOs) for request/response bodies; do not expose database entities directly to the Controllers.
+- **Security:** Spring Security with stateless JWT authentication and OAuth2 client capabilities for Google Login. Passwords must be hashed using `BCryptPasswordEncoder`.
+
+---
+
+## 🤖 Interaction & Coding Style Guide
+- Write clean, self-documenting code with meaningful variable/method names.
+- Avoid deprecated APIs or libraries.
+- When generating files using the Composer tool (`Ctrl+I`), make modifications to BOTH frontend and backend simultaneously if the feature requires end-to-end integration (e.g., creating a new API endpoint and its corresponding Angular service).
+- If code fails to build, analyze stack traces critically and prioritize type safety.

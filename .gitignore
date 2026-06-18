@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Local secrets & debug artifacts ###
+application-local.yml
+debug*.log
+/HashTest.java
+/HashGen.class
