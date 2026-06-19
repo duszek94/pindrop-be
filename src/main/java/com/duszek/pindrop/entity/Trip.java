@@ -18,8 +18,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "trips")
@@ -60,6 +64,24 @@ public class Trip {
 
 	@Column(name = "cover_image_url")
 	private String coverImageUrl;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "budget_tier")
+	private BudgetTier budgetTier;
+
+	@Enumerated(EnumType.STRING)
+	private TravelPace pace;
+
+	@Column(columnDefinition = "TEXT[]")
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	private List<String> interests;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "selected_proposal_type")
+	private ProposalType selectedProposalType;
+
+	@Column(name = "wizard_step")
+	private Short wizardStep;
 
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;

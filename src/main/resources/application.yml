@@ -43,3 +43,14 @@ app:
     secret: ${JWT_SECRET:}
     expiration: 86400000
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  ai:
+    provider: stub
+    model: gpt-4o
+    api-key: ${OPENAI_API_KEY:}
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  places:
+    provider: stub
+    api-key: ${GOOGLE_PLACES_API_KEY:}
+  weather:
+    provider: stub
+    api-key: ${OPENWEATHER_API_KEY:}
