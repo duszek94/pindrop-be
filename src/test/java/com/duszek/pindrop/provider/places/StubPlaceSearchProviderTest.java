@@ -15,6 +15,9 @@ class StubPlaceSearchProviderTest {
 
 		assertFalse(results.isEmpty());
 		assertEquals("Warsaw", results.get(0).name());
+		assertEquals("Masovian Voivodeship", results.get(0).region());
 		assertEquals("Poland", results.get(0).country());
+		assertEquals("pl", results.get(0).countryCode());
+		assertEquals("Warsaw, Masovian Voivodeship, Poland", results.get(0).displayName());
 	}
 }

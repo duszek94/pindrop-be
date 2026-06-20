@@ -6,7 +6,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @Slf4j
@@ -53,7 +52,7 @@ public class NominatimGeocodingClient {
 
 	@SuppressWarnings("unchecked")
 	private PlaceSearchResult toPlaceSearchResult(Map<String, Object> item) {
-		String displayName = String.valueOf(item.getOrDefault("display_name", ""));
+		String rawDisplayName = String.valueOf(item.getOrDefault("display_name", ""));
 		Map<String, Object> address = item.get("address") instanceof Map<?, ?> addr
 				? (Map<String, Object>) addr
 				: Map.of();
@@ -64,29 +63,30 @@ public class NominatimGeocodingClient {
 				address.get("village"),
 				address.get("municipality"),
 				item.get("name"),
-				displayName.split(",")[0]);
-		String country = String.valueOf(address.getOrDefault("country", ""));
+				rawDisplayName.split(",")[0]);
+		String region = firstNonBlank(
+				address.get("state"),
+				address.get("region"),
+				address.get("state_district"),
+				address.get("county"),
+				address.get("province"));
+		String country = PlaceFormatting.blankToNull(String.valueOf(address.getOrDefault("country", "")));
+		String countryCode = PlaceFormatting.blankToNull(String.valueOf(address.getOrDefault("country_code", "")));
 
 		double lat = parseDouble(item.get("lat"));
 		double lng = parseDouble(item.get("lon"));
 
-		String formattedDisplay = country.isBlank()
-				? name
-				: name + ", " + country;
-
-		return new PlaceSearchResult(name, country, formattedDisplay, lat, lng);
+		return PlaceSearchResult.of(name, region, country, countryCode, lat, lng);
 	}
 
 	private static String firstNonBlank(Object... values) {
 		for (Object value : values) {
-			if (value != null) {
-				String text = String.valueOf(value).trim();
-				if (!text.isBlank()) {
-					return text;
-				}
+			String text = PlaceFormatting.blankToNull(value != null ? String.valueOf(value) : null);
+			if (text != null) {
+				return text;
 			}
 		}
-		return "Unknown";
+		return null;
 	}
 
 	private static double parseDouble(Object value) {

@@ -29,6 +29,7 @@ public class AppProperties {
 	public static class Places {
 		private String provider = "stub";
 		private String apiKey = "";
+		private boolean photosEnabled = true;
 	}
 
 	@Getter
