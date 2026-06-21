@@ -2,6 +2,8 @@ package com.duszek.pindrop.service;
 
 import com.duszek.pindrop.dto.planning.ItineraryActivityResponse;
 import com.duszek.pindrop.dto.planning.ItineraryDaySummary;
+import com.duszek.pindrop.dto.planning.ProposalCostBreakdownMapper;
+import com.duszek.pindrop.dto.planning.ProposalCostBreakdownResponse;
 import com.duszek.pindrop.dto.planning.TripItineraryResponse;
 import com.duszek.pindrop.dto.planning.TripProposalResponse;
 import com.duszek.pindrop.dto.planning.WeatherDayResponse;
@@ -72,8 +74,7 @@ public class ItineraryGenerationService {
 				lng,
 				trip.getStartDate(),
 				trip.getEndDate(),
-				trip.getBudgetTier(),
-				trip.getPace(),
+				trip.getPreferenceProfile(),
 				trip.getInterests() != null ? trip.getInterests() : List.of(),
 				weather);
 
@@ -94,9 +95,14 @@ public class ItineraryGenerationService {
 			entity.setRecommended(generated.recommended());
 			entity.setWeatherJson(writeJson(generated.weatherForecast()));
 			entity.setHighlightsJson(writeJson(generated.highlights()));
+			entity.setCostBreakdownJson(writeJson(generated.costBreakdown()));
 			tripProposalRepository.save(entity);
 
-			responses.add(toProposalResponse(entity, generated.weatherForecast(), generated.highlights()));
+			responses.add(toProposalResponse(
+					entity,
+					generated.weatherForecast(),
+					generated.highlights(),
+					generated.costBreakdown()));
 		}
 
 		if (trip.getSelectedProposalType() == null) {
@@ -198,8 +204,7 @@ public class ItineraryGenerationService {
 				lng,
 				trip.getStartDate(),
 				trip.getEndDate(),
-				trip.getBudgetTier(),
-				trip.getPace(),
+				trip.getPreferenceProfile(),
 				trip.getInterests() != null ? trip.getInterests() : List.of(),
 				weather);
 	}
@@ -212,8 +217,9 @@ public class ItineraryGenerationService {
 			throw new BadRequestException("Start and end dates are required");
 		}
 		TripUtils.validateDateRange(trip.getStartDate(), trip.getEndDate());
-		if (trip.getBudgetTier() == null || trip.getPace() == null) {
-			throw new BadRequestException("Budget and pace are required");
+		if (trip.getPreferenceProfile() == null
+				&& (trip.getBudgetTier() == null || trip.getPace() == null)) {
+			throw new BadRequestException("Preferences are required");
 		}
 	}
 
@@ -235,10 +241,13 @@ public class ItineraryGenerationService {
 	TripProposalResponse toProposalResponse(
 			TripProposal entity,
 			List<TripPlanGenerationResult.WeatherDayForecast> weather,
-			List<String> highlights) {
+			List<String> highlights,
+			TripPlanGenerationResult.ProposalCostBreakdown costBreakdown) {
 		List<WeatherDayResponse> weatherResponse = weather.stream()
 				.map(w -> new WeatherDayResponse(w.dayLabel(), w.icon(), w.tempC()))
 				.toList();
+		ProposalCostBreakdownResponse costBreakdownResponse =
+				ProposalCostBreakdownMapper.toResponse(costBreakdown);
 		return TripProposalResponse.builder()
 				.id(entity.getId())
 				.type(entity.getProposalType())
@@ -246,6 +255,7 @@ public class ItineraryGenerationService {
 				.summary(entity.getSummary())
 				.estimatedCostUsd(entity.getEstimatedCostUsd())
 				.recommended(entity.isRecommended())
+				.costBreakdown(costBreakdownResponse)
 				.weatherForecast(weatherResponse)
 				.highlights(highlights)
 				.build();
@@ -271,10 +281,13 @@ public class ItineraryGenerationService {
 					List<TripPlanGenerationResult.WeatherDayForecast> weather =
 							readJson(entity.getWeatherJson(), new TypeReference<>() {});
 					List<String> highlights = readJson(entity.getHighlightsJson(), new TypeReference<>() {});
+					TripPlanGenerationResult.ProposalCostBreakdown costBreakdown =
+							readJson(entity.getCostBreakdownJson(), new TypeReference<>() {});
 					return toProposalResponse(
 							entity,
 							weather != null ? weather : List.of(),
-							highlights != null ? highlights : List.of());
+							highlights != null ? highlights : List.of(),
+							costBreakdown);
 				})
 				.toList();
 	}

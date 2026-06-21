@@ -1,5 +1,6 @@
 package com.duszek.pindrop.service;
 
+import com.duszek.pindrop.dto.planning.PreferenceProfile;
 import com.duszek.pindrop.dto.planning.SelectProposalRequest;
 import com.duszek.pindrop.dto.planning.TripItineraryResponse;
 import com.duszek.pindrop.dto.planning.TripProposalResponse;
@@ -11,6 +12,7 @@ import com.duszek.pindrop.entity.Trip;
 import com.duszek.pindrop.entity.TripStatus;
 import com.duszek.pindrop.repository.TripItineraryActivityRepository;
 import com.duszek.pindrop.repository.TripRepository;
+import com.duszek.pindrop.util.PreferenceProfileUtils;
 import com.duszek.pindrop.util.TripUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,8 +45,12 @@ public class TripPlanningService {
 	@Transactional
 	public void updatePreferences(Long userId, Long tripId, UpdatePreferencesRequest request) {
 		Trip trip = itineraryGenerationService.loadOwnedTrip(userId, tripId);
-		trip.setBudgetTier(request.getBudgetTier());
-		trip.setPace(request.getPace());
+		PreferenceProfile profile = request.getPreferenceProfile();
+		profile.setAdditionalRequirements(
+				PreferenceProfileUtils.sanitizeAdditionalRequirements(profile.getAdditionalRequirements()));
+		trip.setPreferenceProfile(profile);
+		trip.setBudgetTier(profile.getBudgetStyle());
+		trip.setPace(profile.getPace());
 		trip.setWizardStep((short) 3);
 		tripRepository.save(trip);
 	}

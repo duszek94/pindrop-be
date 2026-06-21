@@ -1,7 +1,6 @@
 package com.duszek.pindrop.dto.planning;
 
-import com.duszek.pindrop.entity.BudgetTier;
-import com.duszek.pindrop.entity.TravelPace;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,8 +10,6 @@ import lombok.Setter;
 public class UpdatePreferencesRequest {
 
 	@NotNull
-	private BudgetTier budgetTier;
-
-	@NotNull
-	private TravelPace pace;
+	@Valid
+	private PreferenceProfile preferenceProfile;
 }

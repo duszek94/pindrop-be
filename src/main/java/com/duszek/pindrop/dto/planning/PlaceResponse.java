@@ -21,4 +21,5 @@ public class PlaceResponse {
 	private String photoUrl;
 	private double lat;
 	private double lng;
+	private String placeType;
 }

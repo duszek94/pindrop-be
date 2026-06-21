@@ -56,6 +56,9 @@ public class TripProposal {
 	@Column(name = "highlights_json", columnDefinition = "TEXT")
 	private String highlightsJson;
 
+	@Column(name = "cost_breakdown_json", columnDefinition = "TEXT")
+	private String costBreakdownJson;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

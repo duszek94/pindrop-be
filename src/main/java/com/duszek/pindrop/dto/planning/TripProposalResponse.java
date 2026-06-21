@@ -22,6 +22,7 @@ public class TripProposalResponse {
 	private String summary;
 	private int estimatedCostUsd;
 	private boolean recommended;
+	private ProposalCostBreakdownResponse costBreakdown;
 	private List<WeatherDayResponse> weatherForecast;
 	private List<String> highlights;
 }

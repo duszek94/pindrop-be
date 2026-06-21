@@ -17,7 +17,36 @@ public record TripPlanGenerationResult(List<GeneratedProposal> proposals) {
 			boolean recommended,
 			List<WeatherDayForecast> weatherForecast,
 			List<String> highlights,
-			List<GeneratedDay> days) {
+			List<GeneratedDay> days,
+			ProposalCostBreakdown costBreakdown) {
+	}
+
+	public record ProposalCostBreakdown(
+			EstimatedTotal estimatedTotal,
+			Breakdown breakdown) {
+	}
+
+	public record EstimatedTotal(int min, int max, String currency, String confidence) {
+	}
+
+	public record Breakdown(
+			CostRange accommodation,
+			TransportCost transport,
+			CostRange food,
+			CostRange attractions) {
+	}
+
+	public record CostRange(int min, int max) {
+	}
+
+	public record TransportCost(int min, int max, boolean includesCarCosts, TransportSubCost sub) {
+	}
+
+	public record TransportSubCost(
+			CostRange publicTransit,
+			CostRange fuel,
+			CostRange parking,
+			CostRange carRental) {
 	}
 
 	public record WeatherDayForecast(String dayLabel, String icon, int tempC) {

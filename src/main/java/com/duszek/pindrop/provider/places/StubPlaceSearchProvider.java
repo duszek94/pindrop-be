@@ -1,10 +1,14 @@
 package com.duszek.pindrop.provider.places;
 
+import com.duszek.pindrop.util.DebugSessionLog;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Component
 @ConditionalOnProperty(name = "app.places.provider", havingValue = "stub", matchIfMissing = true)
@@ -28,19 +32,57 @@ public class StubPlaceSearchProvider implements PlaceSearchProvider {
 
 	@Override
 	public List<PlaceSearchResult> search(String query, int limit) {
+		return search(query, limit, "en");
+	}
+
+	@Override
+	public List<PlaceSearchResult> search(String query, int limit, String language) {
 		if (query == null || query.isBlank()) {
 			return POPULAR.stream().limit(limit).toList();
 		}
 		String normalized = query.toLowerCase(Locale.ROOT);
+		List<PlaceSearchResult> curatedMatches = CuratedPlaceCatalog.search(query, limit);
 		List<PlaceSearchResult> localMatches = POPULAR.stream()
 				.filter(place -> matchesQuery(place, normalized))
 				.limit(limit)
 				.toList();
 
-		if (localMatches.isEmpty()) {
-			return nominatimGeocodingClient.search(query, limit);
+		List<PlaceSearchResult> remoteMatches = nominatimGeocodingClient.search(query, limit, language);
+
+		// #region agent log
+		DebugSessionLog.log("H4", "StubPlaceSearchProvider.search", "stub search merge", new LinkedHashMap<>(Map.of(
+				"query", query,
+				"language", language,
+				"curatedCount", curatedMatches.size(),
+				"localCount", localMatches.size(),
+				"remoteCount", remoteMatches.size())));
+		// #endregion
+
+		List<PlaceSearchResult> combined = new ArrayList<>(curatedMatches);
+		for (PlaceSearchResult local : localMatches) {
+			if (!isDuplicate(combined, local)) {
+				combined.add(local);
+			}
 		}
-		return localMatches;
+		for (PlaceSearchResult remote : remoteMatches) {
+			if (!isDuplicate(combined, remote)) {
+				combined.add(remote);
+			}
+			if (combined.size() >= limit) {
+				break;
+			}
+		}
+		return combined.stream().limit(limit).toList();
+	}
+
+	private static boolean isDuplicate(List<PlaceSearchResult> combined, PlaceSearchResult candidate) {
+		return combined.stream().anyMatch(existing -> isSamePlace(existing, candidate));
+	}
+
+	private static boolean isSamePlace(PlaceSearchResult left, PlaceSearchResult right) {
+		return left.name().equalsIgnoreCase(right.name())
+				&& Math.abs(left.lat() - right.lat()) < 0.05
+				&& Math.abs(left.lng() - right.lng()) < 0.05;
 	}
 
 	private static boolean matchesQuery(PlaceSearchResult place, String normalized) {

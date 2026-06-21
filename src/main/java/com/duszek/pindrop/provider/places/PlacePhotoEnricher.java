@@ -6,34 +6,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class GooglePlacePhotoEnricher {
+public class PlacePhotoEnricher {
 
-	private final GooglePlacesClient googlePlacesClient;
+	private final GooglePlacePhotoEnricher googlePlacePhotoEnricher;
+	private final WikimediaPhotoEnricher wikimediaPhotoEnricher;
 
-	public GooglePlacePhotoEnricher(GooglePlacesClient googlePlacesClient) {
-		this.googlePlacesClient = googlePlacesClient;
+	public PlacePhotoEnricher(
+			GooglePlacePhotoEnricher googlePlacePhotoEnricher,
+			WikimediaPhotoEnricher wikimediaPhotoEnricher) {
+		this.googlePlacePhotoEnricher = googlePlacePhotoEnricher;
+		this.wikimediaPhotoEnricher = wikimediaPhotoEnricher;
 	}
 
 	public List<PlaceSearchResult> enrich(List<PlaceSearchResult> places) {
-		if (!googlePlacesClient.isConfigured()) {
-			return places;
-		}
-
 		List<PlaceSearchResult> enriched = new ArrayList<>(places.size());
 		for (PlaceSearchResult place : places) {
-			enriched.add(enrichWithQuery(place, buildQuery(place)));
+			enriched.add(enrichSingle(place, buildQuery(place)));
 		}
 		return enriched;
 	}
 
 	public PlaceSearchResult enrichWithQuery(PlaceSearchResult place, String photoQuery) {
-		if (!googlePlacesClient.isConfigured()) {
-			return place;
+		return enrichSingle(place, photoQuery);
+	}
+
+	private PlaceSearchResult enrichSingle(PlaceSearchResult place, String photoQuery) {
+		String query = photoQuery != null && !photoQuery.isBlank()
+				? photoQuery
+				: buildQuery(place);
+
+		PlaceSearchResult googleEnriched = googlePlacePhotoEnricher.enrichWithQuery(place, query);
+		if (hasUsablePhoto(googleEnriched)) {
+			return googleEnriched;
 		}
-		if (hasUsablePhoto(place)) {
-			return place;
-		}
-		return googlePlacesClient.findPhotoUrl(photoQuery)
+
+		return wikimediaPhotoEnricher.findPhotoUrl(query)
 				.filter(url -> !PhotoUrlValidator.isLikelyMapImage(url))
 				.map(place::withPhotoUrl)
 				.orElse(place);

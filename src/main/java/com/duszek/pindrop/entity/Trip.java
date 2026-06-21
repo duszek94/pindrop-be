@@ -1,5 +1,6 @@
 package com.duszek.pindrop.entity;
 
+import com.duszek.pindrop.dto.planning.PreferenceProfile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -71,6 +72,10 @@ public class Trip {
 
 	@Enumerated(EnumType.STRING)
 	private TravelPace pace;
+
+	@Column(name = "preference_profile", columnDefinition = "jsonb")
+	@JdbcTypeCode(SqlTypes.JSON)
+	private PreferenceProfile preferenceProfile;
 
 	@Column(columnDefinition = "TEXT[]")
 	@JdbcTypeCode(SqlTypes.ARRAY)

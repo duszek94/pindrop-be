@@ -8,7 +8,8 @@ public record PlaceSearchResult(
 		String displayName,
 		double lat,
 		double lng,
-		String photoUrl) {
+		String photoUrl,
+		String placeType) {
 
 	public static PlaceSearchResult of(
 			String name,
@@ -28,6 +29,18 @@ public record PlaceSearchResult(
 			double lat,
 			double lng,
 			String photoUrl) {
+		return of(name, region, country, countryCode, lat, lng, photoUrl, null);
+	}
+
+	public static PlaceSearchResult of(
+			String name,
+			String region,
+			String country,
+			String countryCode,
+			double lat,
+			double lng,
+			String photoUrl,
+			String placeType) {
 		return new PlaceSearchResult(
 				name,
 				region,
@@ -36,10 +49,11 @@ public record PlaceSearchResult(
 				PlaceFormatting.formatDisplayName(name, region, country),
 				lat,
 				lng,
-				photoUrl);
+				photoUrl,
+				placeType);
 	}
 
 	public PlaceSearchResult withPhotoUrl(String photoUrl) {
-		return new PlaceSearchResult(name, region, country, countryCode, displayName, lat, lng, photoUrl);
+		return new PlaceSearchResult(name, region, country, countryCode, displayName, lat, lng, photoUrl, placeType);
 	}
 }

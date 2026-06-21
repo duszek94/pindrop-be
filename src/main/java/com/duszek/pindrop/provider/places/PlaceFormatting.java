@@ -1,11 +1,11 @@
 package com.duszek.pindrop.provider.places;
 
-final class PlaceFormatting {
+public final class PlaceFormatting {
 
 	private PlaceFormatting() {
 	}
 
-	static String formatDisplayName(String name, String region, String country) {
+	public static String formatDisplayName(String name, String region, String country) {
 		StringBuilder builder = new StringBuilder(name);
 		if (region != null && !region.isBlank() && !region.equalsIgnoreCase(name)) {
 			builder.append(", ").append(region);
@@ -16,7 +16,7 @@ final class PlaceFormatting {
 		return builder.toString();
 	}
 
-	static String blankToNull(String value) {
+	public static String blankToNull(String value) {
 		if (value == null || value.isBlank() || "null".equalsIgnoreCase(value)) {
 			return null;
 		}

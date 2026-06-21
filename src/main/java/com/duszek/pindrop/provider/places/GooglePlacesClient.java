@@ -81,7 +81,7 @@ public class GooglePlacesClient {
 	public Optional<String> findPhotoUrl(String query) {
 		return search(query, 1).stream()
 				.map(PlaceSearchResult::photoUrl)
-				.filter(url -> url != null && !url.isBlank())
+				.filter(url -> url != null && !url.isBlank() && !PhotoUrlValidator.isLikelyMapImage(url))
 				.findFirst();
 	}
 
@@ -143,7 +143,7 @@ public class GooglePlacesClient {
 						return response.bodyToMono(Void.class).then(Mono.empty());
 					})
 					.blockOptional()
-					.filter(url -> !url.isBlank());
+					.filter(url -> !url.isBlank() && !PhotoUrlValidator.isLikelyMapImage(url));
 		} catch (Exception ex) {
 			log.debug("Failed to resolve Google photo URL: {}", ex.getMessage());
 			return Optional.empty();

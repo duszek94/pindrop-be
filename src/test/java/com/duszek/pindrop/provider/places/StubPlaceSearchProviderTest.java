@@ -20,4 +20,14 @@ class StubPlaceSearchProviderTest {
 		assertEquals("pl", results.get(0).countryCode());
 		assertEquals("Warsaw, Masovian Voivodeship, Poland", results.get(0).displayName());
 	}
+
+	@Test
+	void searchPartialTatr_returnsTatraMountainsWithoutNominatim() {
+		StubPlaceSearchProvider provider = new StubPlaceSearchProvider(new NominatimGeocodingClient());
+
+		var results = provider.search("Tatr", 8);
+
+		assertFalse(results.isEmpty());
+		assertEquals("Tatra Mountains", results.getFirst().name());
+	}
 }

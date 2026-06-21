@@ -17,6 +17,11 @@ public class NominatimPlaceSearchProvider implements PlaceSearchProvider {
 
 	@Override
 	public List<PlaceSearchResult> search(String query, int limit) {
-		return nominatimGeocodingClient.search(query, limit);
+		return search(query, limit, "en");
+	}
+
+	@Override
+	public List<PlaceSearchResult> search(String query, int limit, String language) {
+		return nominatimGeocodingClient.search(query, limit, language);
 	}
 }

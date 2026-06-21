@@ -1,13 +1,9 @@
 package com.duszek.pindrop.provider.ai;
 
-import com.duszek.pindrop.entity.ActivityType;
-import com.duszek.pindrop.entity.BudgetTier;
-import com.duszek.pindrop.entity.ProposalType;
-import com.duszek.pindrop.entity.TravelPace;
+import com.duszek.pindrop.dto.planning.PreferenceProfile;
 import com.duszek.pindrop.provider.weather.WeatherForecast;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 public record TripPlanGenerationRequest(
@@ -16,8 +12,7 @@ public record TripPlanGenerationRequest(
 		double lng,
 		LocalDate startDate,
 		LocalDate endDate,
-		BudgetTier budgetTier,
-		TravelPace pace,
+		PreferenceProfile preferenceProfile,
 		List<String> interests,
 		List<WeatherForecast> weatherForecast) {
 }
