@@ -80,9 +80,10 @@ public class ItineraryGenerationService {
 
 		TripPlanGenerationResult result = tripPlanAiProvider.generateProposals(request);
 
-		tripProposalRepository.deleteByTripId(tripId);
 		tripItineraryActivityRepository.deleteByDay_Trip_Id(tripId);
 		tripItineraryDayRepository.deleteByTripId(tripId);
+		tripProposalRepository.deleteByTripId(tripId);
+		tripProposalRepository.flush();
 
 		List<TripProposalResponse> responses = new ArrayList<>();
 		for (TripPlanGenerationResult.GeneratedProposal generated : result.proposals()) {

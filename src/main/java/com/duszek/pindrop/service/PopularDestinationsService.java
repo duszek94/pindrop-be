@@ -28,7 +28,7 @@ public class PopularDestinationsService {
 	private static final String PLACEHOLDER_PHOTO =
 			"https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=720&q=80";
 
-	private static final String CACHE_VERSION = "v4";
+	private static final String CACHE_VERSION = "v5";
 
 	private final PopularDestinationsAiProvider popularDestinationsAiProvider;
 	private final PlaceSearchProvider placeSearchProvider;
@@ -62,7 +62,7 @@ public class PopularDestinationsService {
 				String photoQuery = suggestion.name() + ", " + suggestion.country();
 				place = placePhotoEnricher.enrichWithQuery(place, photoQuery);
 			}
-			place = placeLocalizationService.localize(place, language);
+			place = placeLocalizationService.localizeForSearch(place, language);
 			resolved.add(toResponse(place, suggestion));
 			if (resolved.size() >= limit) {
 				break;

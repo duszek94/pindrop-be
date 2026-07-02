@@ -28,7 +28,7 @@ public class PlaceLocalizationService {
 				displayName,
 				place.lat(),
 				place.lng(),
-				null,
+				place.photoUrl(),
 				place.placeType());
 	}
 

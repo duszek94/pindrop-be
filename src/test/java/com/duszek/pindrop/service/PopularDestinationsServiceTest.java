@@ -61,7 +61,7 @@ class PopularDestinationsServiceTest {
 				.thenReturn(List.of(
 						PlaceSearchResult.of("Saint-Sulpice", "Vaud", "Switzerland", "ch", 46.77, 6.71)));
 
-		when(placeLocalizationService.localize(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(placeLocalizationService.localizeForSearch(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		List<PlaceResponse> popular = service.getPopular(1, "en");
 
@@ -78,7 +78,7 @@ class PopularDestinationsServiceTest {
 						new PopularDestinationSuggestion("Lake Geneva", "Switzerland", "lake"),
 						new PopularDestinationSuggestion("Scottish Highlands", "United Kingdom", "region")));
 
-		when(placeLocalizationService.localize(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(placeLocalizationService.localizeForSearch(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
 
 		List<PlaceResponse> popular = service.getPopular(4, "en");
 
@@ -91,7 +91,7 @@ class PopularDestinationsServiceTest {
 		when(popularDestinationsAiProvider.suggest(any(PopularDestinationsRequest.class)))
 				.thenReturn(List.of(new PopularDestinationSuggestion("Barcelona", "Spain", "city")));
 
-		when(placeLocalizationService.localize(any(), anyString())).thenAnswer(invocation -> {
+		when(placeLocalizationService.localizeForSearch(any(), anyString())).thenAnswer(invocation -> {
 			PlaceSearchResult place = invocation.getArgument(0);
 			return place.withPhotoUrl(
 					"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Spain_location_map.svg/720px-Spain_location_map.svg.png");

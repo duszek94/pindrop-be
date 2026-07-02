@@ -4,6 +4,7 @@ import com.duszek.pindrop.config.AppProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -128,26 +129,53 @@ public class GooglePlacesClient {
 
 	private Optional<String> resolvePhotoMediaUrl(String photoResourceName) {
 		try {
+			String mediaPath = "/v1/" + photoResourceName + "/media";
 			return webClient.get()
 					.uri(uriBuilder -> uriBuilder
-							.path("/v1/{photoResourceName}/media")
-							.queryParam("maxHeightPx", 480)
+							.path(mediaPath)
+							.queryParam("maxHeightPx", 720)
 							.queryParam("maxWidthPx", 720)
 							.queryParam("skipHttpRedirect", true)
-							.queryParam("key", appProperties.getPlaces().getApiKey())
-							.build(photoResourceName))
-					.exchangeToMono(response -> {
-						if (response.statusCode().is3xxRedirection()) {
-							return Mono.justOrEmpty(response.headers().header(HttpHeaders.LOCATION).stream().findFirst());
-						}
-						return response.bodyToMono(Void.class).then(Mono.empty());
-					})
+							.build())
+					.header("X-Goog-Api-Key", appProperties.getPlaces().getApiKey())
+					.exchangeToMono(this::extractPhotoUrlFromMediaResponse)
 					.blockOptional()
 					.filter(url -> !url.isBlank() && !PhotoUrlValidator.isLikelyMapImage(url));
 		} catch (Exception ex) {
 			log.debug("Failed to resolve Google photo URL: {}", ex.getMessage());
 			return Optional.empty();
 		}
+	}
+
+	private Mono<String> extractPhotoUrlFromMediaResponse(ClientResponse response) {
+		if (response.statusCode().is3xxRedirection()) {
+			return Mono.justOrEmpty(response.headers().header(HttpHeaders.LOCATION).stream().findFirst())
+					.map(GooglePlacesClient::normalizePhotoUri);
+		}
+		if (!response.statusCode().is2xxSuccessful()) {
+			return Mono.empty();
+		}
+		return response.bodyToMono(Map.class)
+				.mapNotNull(body -> normalizePhotoUri(extractPhotoUri(body)));
+	}
+
+	static String extractPhotoUri(Map<?, ?> body) {
+		if (body == null) {
+			return null;
+		}
+		Object photoUri = body.get("photoUri");
+		return photoUri != null ? String.valueOf(photoUri).trim() : null;
+	}
+
+	static String normalizePhotoUri(String photoUri) {
+		if (photoUri == null || photoUri.isBlank()) {
+			return null;
+		}
+		String trimmed = photoUri.trim();
+		if (trimmed.startsWith("//")) {
+			return "https:" + trimmed;
+		}
+		return trimmed;
 	}
 
 	@SuppressWarnings("unchecked")

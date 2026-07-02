@@ -1,5 +1,6 @@
 package com.duszek.pindrop.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(BadRequestException.class)
 	public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException ex) {
 		return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(Map.of("message", "Could not save trip data because of a conflict with existing records."));
 	}
 
 	@ExceptionHandler(BadCredentialsException.class)

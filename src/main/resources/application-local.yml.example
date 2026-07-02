@@ -19,3 +19,4 @@ app:
     secret: your-jwt-secret
   weather:
     api-key: your-openweather-api-key
+    # provider: openweather

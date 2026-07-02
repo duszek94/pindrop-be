@@ -40,6 +40,10 @@ public class PlacePhotoEnricher {
 			return googleEnriched;
 		}
 
+		if (googlePlacePhotoEnricher.isConfigured()) {
+			return place;
+		}
+
 		return wikimediaPhotoEnricher.findPhotoUrl(place.name(), place.country())
 				.filter(url -> !PhotoUrlValidator.isLikelyMapImage(url))
 				.map(place::withPhotoUrl)

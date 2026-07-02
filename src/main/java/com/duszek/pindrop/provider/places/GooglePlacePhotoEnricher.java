@@ -39,6 +39,10 @@ public class GooglePlacePhotoEnricher {
 				.orElse(place);
 	}
 
+	public boolean isConfigured() {
+		return googlePlacesClient.isConfigured();
+	}
+
 	private static String buildQuery(PlaceSearchResult place) {
 		return place.displayName() != null ? place.displayName() : place.name();
 	}
