@@ -3,7 +3,7 @@
 
 spring:
   datasource:
-    password: pindrop123
+    password: your-db-password
 
   security:
     oauth2:
@@ -16,6 +16,6 @@ spring:
 app:
   jwt:
     # Base64-encoded 256-bit key for local dev only
-    secret: cGluZHJvcC1kZXYtc2VjcmV0LWtleS0yNTZiaXRzISE=
+    secret: your-jwt-secret
   weather:
     api-key: your-openweather-api-key
