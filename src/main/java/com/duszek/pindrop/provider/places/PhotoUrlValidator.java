@@ -45,8 +45,12 @@ public final class PhotoUrlValidator {
 				|| lower.contains("location_map")
 				|| lower.contains("relief_location")
 				|| lower.contains("geology_map")
+				|| lower.contains("locator_map")
 				|| lower.endsWith(".svg")
+				|| lower.contains(".svg?")
 				|| lower.contains("staticmap")
-				|| lower.contains("openstreetmap");
+				|| lower.contains("openstreetmap")
+				|| lower.contains("flag_of")
+				|| lower.contains("coat_of_arms");
 	}
 }

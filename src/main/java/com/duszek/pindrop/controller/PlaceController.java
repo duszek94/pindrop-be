@@ -22,7 +22,7 @@ public class PlaceController {
 
 	@GetMapping("/popular")
 	public List<PlaceResponse> popular(
-			@RequestParam(defaultValue = "6") int limit,
+			@RequestParam(defaultValue = "4") int limit,
 			@RequestHeader(value = "Accept-Language", defaultValue = "en") String acceptLanguage) {
 		return popularDestinationsService.getPopular(limit, acceptLanguage);
 	}

@@ -5,6 +5,7 @@ import com.duszek.pindrop.dto.planning.PlaceResponse;
 import com.duszek.pindrop.provider.ai.PopularDestinationSuggestion;
 import com.duszek.pindrop.provider.ai.PopularDestinationsAiProvider;
 import com.duszek.pindrop.provider.ai.PopularDestinationsRequest;
+import com.duszek.pindrop.provider.places.CuratedPlaceCatalog;
 import com.duszek.pindrop.provider.places.PhotoUrlValidator;
 import com.duszek.pindrop.provider.places.PlaceFormatting;
 import com.duszek.pindrop.provider.places.PlacePhotoEnricher;
@@ -16,18 +17,18 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class PopularDestinationsService {
 
-	private static final int REQUIRED_COUNT = 6;
+	private static final String PLACEHOLDER_PHOTO =
+			"https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=720&q=80";
+
+	private static final String CACHE_VERSION = "v4";
 
 	private final PopularDestinationsAiProvider popularDestinationsAiProvider;
 	private final PlaceSearchProvider placeSearchProvider;
@@ -40,156 +41,90 @@ public class PopularDestinationsService {
 	public List<PlaceResponse> getPopular(int limit, String language) {
 		LocalDate today = LocalDate.now();
 		String lang = AppLanguage.resolve(language);
-		String cacheKey = today + ":" + lang;
-		int targetCount = Math.max(limit, REQUIRED_COUNT);
+		int resolvedLimit = Math.clamp(limit, 1, 4);
+		String cacheKey = CACHE_VERSION + ":" + today + ":" + lang + ":" + resolvedLimit;
 
-		return cache.computeIfAbsent(cacheKey, key -> loadPopular(today, targetCount, lang));
+		return cache.computeIfAbsent(cacheKey, key -> loadPopular(today, resolvedLimit, lang));
 	}
 
-	private List<PlaceResponse> loadPopular(LocalDate today, int targetCount, String language) {
+	private List<PlaceResponse> loadPopular(LocalDate today, int limit, String language) {
 		LocalDate periodStart = today.withDayOfMonth(1);
-		PopularDestinationsRequest request = new PopularDestinationsRequest(
-				periodStart, today, targetCount + 4, language);
+		PopularDestinationsRequest request = new PopularDestinationsRequest(periodStart, today, limit, language);
 		List<PopularDestinationSuggestion> suggestions = popularDestinationsAiProvider.suggest(request);
 
 		List<PlaceResponse> resolved = new ArrayList<>();
-		Set<String> usedKeys = new HashSet<>();
-
 		for (PopularDestinationSuggestion suggestion : suggestions) {
-			if (resolved.size() >= targetCount) {
-				break;
-			}
-			String key = suggestionKey(suggestion);
-			if (!usedKeys.add(key)) {
+			PlaceSearchResult place = resolvePlace(suggestion);
+			if (place == null) {
 				continue;
 			}
-			buildPopularResponse(suggestion, language).ifPresent(resolved::add);
+			if (appProperties.getPlaces().isPhotosEnabled()) {
+				String photoQuery = suggestion.name() + ", " + suggestion.country();
+				place = placePhotoEnricher.enrichWithQuery(place, photoQuery);
+			}
+			place = placeLocalizationService.localize(place, language);
+			resolved.add(toResponse(place, suggestion));
+			if (resolved.size() >= limit) {
+				break;
+			}
 		}
-
 		return List.copyOf(resolved);
 	}
 
-	private java.util.Optional<PlaceResponse> buildPopularResponse(
-			PopularDestinationSuggestion suggestion,
-			String language) {
-		PlaceSearchResult place = resolvePlace(suggestion);
-		if (place == null) {
-			return java.util.Optional.empty();
-		}
-
-		String photoQuery = suggestion.name() + ", " + suggestion.country();
-		if (appProperties.getPlaces().isPhotosEnabled()) {
-			place = placePhotoEnricher.enrichWithQuery(place, photoQuery);
-		}
-
-		String photoUrl = resolvePhotoUrl(place.photoUrl(), suggestion.photoUrl());
-		place = place.withPhotoUrl(photoUrl);
-		place = placeLocalizationService.localize(place, language);
-
-		return java.util.Optional.of(toResponse(suggestion, place));
-	}
-
-	private static String resolvePhotoUrl(String enrichedPhotoUrl, String curatedPhotoUrl) {
-		boolean curatedUsable = hasUsablePhoto(curatedPhotoUrl)
-				&& !PhotoUrlValidator.isRemovedUnsplashPhoto(curatedPhotoUrl);
-		boolean enrichedUsable = hasUsablePhoto(enrichedPhotoUrl);
-
-		if (curatedUsable) {
-			return curatedPhotoUrl;
-		}
-		if (enrichedUsable) {
-			return enrichedPhotoUrl;
-		}
-		return curatedPhotoUrl;
-	}
-
-	private static boolean hasUsablePhoto(String photoUrl) {
-		return photoUrl != null
-				&& !photoUrl.isBlank()
-				&& !PhotoUrlValidator.isLikelyMapImage(photoUrl);
-	}
-
 	private PlaceSearchResult resolvePlace(PopularDestinationSuggestion suggestion) {
+		PlaceSearchResult curated = CuratedPlaceCatalog.findForSuggestion(suggestion.name(), suggestion.country());
+		if (curated != null) {
+			return withSuggestionIdentity(suggestion, curated);
+		}
+
+		PlaceSearchResult coordinates = findCoordinates(suggestion);
+		if (coordinates == null) {
+			return null;
+		}
+
+		return withSuggestionIdentity(suggestion, coordinates);
+	}
+
+	private PlaceSearchResult findCoordinates(PopularDestinationSuggestion suggestion) {
 		String combinedQuery = suggestion.name() + ", " + suggestion.country();
-		List<PlaceSearchResult> results = placeSearchProvider.search(combinedQuery, 10);
-		PlaceSearchResult match = pickBestMatch(suggestion, results);
+		List<PlaceSearchResult> results = placeSearchProvider.search(combinedQuery, 8);
+		PlaceSearchResult match = pickByCountry(suggestion, results);
 		if (match != null) {
 			return match;
 		}
-		results = placeSearchProvider.search(suggestion.name(), 10);
-		return pickBestMatch(suggestion, results);
+
+		return pickByCountry(suggestion, placeSearchProvider.search(suggestion.name(), 8));
 	}
 
-	private PlaceSearchResult pickBestMatch(
+	private PlaceSearchResult pickByCountry(
 			PopularDestinationSuggestion suggestion,
 			List<PlaceSearchResult> results) {
 		if (results == null || results.isEmpty()) {
 			return null;
 		}
 
+		String targetCountry = suggestion.country().toLowerCase(Locale.ROOT);
 		return results.stream()
-				.max(Comparator.comparingInt(place -> scoreMatch(suggestion, place)))
-				.filter(place -> scoreMatch(suggestion, place) > 0)
+				.filter(place -> countryMatches(place.country(), targetCountry))
+				.findFirst()
 				.orElse(null);
 	}
 
-	private static int scoreMatch(PopularDestinationSuggestion suggestion, PlaceSearchResult place) {
-		int score = 0;
-		String targetName = suggestion.name().toLowerCase(Locale.ROOT);
-		String targetCountry = suggestion.country().toLowerCase(Locale.ROOT);
-		String placeName = place.name() != null ? place.name().toLowerCase(Locale.ROOT) : "";
-		String displayName = place.displayName() != null ? place.displayName().toLowerCase(Locale.ROOT) : "";
-
-		if (placeName.equals(targetName) || displayName.startsWith(targetName + ",")) {
-			score += 300;
-		} else if (placeName.contains(targetName) || targetName.contains(placeName)) {
-			score += 140;
-		} else {
-			score += tokenOverlapScore(targetName, placeName, displayName);
-		}
-
-		if (countryMatches(place.country(), targetCountry)) {
-			score += 200;
-		} else {
-			score -= 400;
-		}
-
-		if (place.countryCode() != null && targetCountry.length() == 2
-				&& place.countryCode().equalsIgnoreCase(targetCountry)) {
-			score += 250;
-		}
-
-		if (suggestion.placeType() != null && suggestion.placeType().equals(place.placeType())) {
-			score += 80;
-		}
-
-		if ("city".equals(suggestion.placeType())
-				&& ("hamlet".equals(place.placeType()) || "village".equals(place.placeType()))) {
-			score -= 180;
-		}
-
-		if ("region".equals(suggestion.placeType()) && "city".equals(place.placeType())) {
-			score -= 40;
-		}
-
-		if (placeName.contains("path") || placeName.contains("località") || placeName.contains("localita")) {
-			score -= 120;
-		}
-
-		return score;
-	}
-
-	private static int tokenOverlapScore(String targetName, String placeName, String displayName) {
-		int score = 0;
-		for (String token : targetName.split("\\s+")) {
-			if (token.length() < 4) {
-				continue;
-			}
-			if (placeName.contains(token) || displayName.contains(token)) {
-				score += 70;
-			}
-		}
-		return score;
+	private static PlaceSearchResult withSuggestionIdentity(
+			PopularDestinationSuggestion suggestion,
+			PlaceSearchResult source) {
+		String region = source.region();
+		String country = source.country() != null ? source.country() : suggestion.country();
+		return new PlaceSearchResult(
+				suggestion.name(),
+				region,
+				country,
+				source.countryCode(),
+				PlaceFormatting.formatDisplayName(suggestion.name(), region, country),
+				source.lat(),
+				source.lng(),
+				source.photoUrl(),
+				suggestion.placeType() != null ? suggestion.placeType() : source.placeType());
 	}
 
 	private static boolean countryMatches(String placeCountry, String targetCountry) {
@@ -207,36 +142,41 @@ public class PopularDestinationsService {
 	private static List<String> countryAliases(String country) {
 		return switch (country) {
 			case "united states", "usa", "us" -> List.of("united states", "usa");
-			case "united kingdom", "uk", "great britain" -> List.of("united kingdom", "great britain");
+			case "united kingdom", "uk", "great britain" -> List.of("united kingdom", "great britain", "scotland");
 			case "greece", "hellas" -> List.of("greece", "hellas", "elláda");
 			case "spain", "españa" -> List.of("spain", "españa");
 			case "italy", "italia" -> List.of("italy", "italia");
 			case "switzerland", "schweiz", "suisse" -> List.of("switzerland", "schweiz", "suisse", "svizzera");
 			case "poland", "polska" -> List.of("poland", "polska");
 			case "indonesia" -> List.of("indonesia");
+			case "canada" -> List.of("canada");
+			case "argentina" -> List.of("argentina");
 			default -> List.of(country);
 		};
 	}
 
-	private PlaceResponse toResponse(PopularDestinationSuggestion suggestion, PlaceSearchResult place) {
-		String country = place.country() != null ? place.country() : suggestion.country();
-		String displayName = PlaceFormatting.formatDisplayName(suggestion.name(), place.region(), country);
-		String placeType = place.placeType() != null ? place.placeType() : suggestion.placeType();
-
+	private PlaceResponse toResponse(PlaceSearchResult place, PopularDestinationSuggestion suggestion) {
+		String placeType = suggestion.placeType() != null ? suggestion.placeType() : place.placeType();
 		return PlaceResponse.builder()
-				.name(suggestion.name())
+				.name(place.name())
 				.region(place.region())
-				.country(country)
+				.country(place.country())
 				.countryCode(place.countryCode())
-				.displayName(displayName)
+				.displayName(place.displayName())
 				.lat(place.lat())
 				.lng(place.lng())
-				.photoUrl(place.photoUrl())
+				.photoUrl(resolvePhotoUrl(place.photoUrl()))
 				.placeType(placeType)
 				.build();
 	}
 
-	private static String suggestionKey(PopularDestinationSuggestion suggestion) {
-		return suggestion.name().toLowerCase(Locale.ROOT) + "|" + suggestion.country().toLowerCase(Locale.ROOT);
+	private static String resolvePhotoUrl(String photoUrl) {
+		if (photoUrl == null || photoUrl.isBlank()) {
+			return PLACEHOLDER_PHOTO;
+		}
+		if (PhotoUrlValidator.isLikelyMapImage(photoUrl) || PhotoUrlValidator.isRemovedUnsplashPhoto(photoUrl)) {
+			return PLACEHOLDER_PHOTO;
+		}
+		return photoUrl;
 	}
 }

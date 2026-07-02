@@ -1,7 +1,6 @@
 package com.duszek.pindrop.provider.places;
 
 import com.duszek.pindrop.util.AppLanguage;
-import com.duszek.pindrop.util.DebugSessionLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -54,13 +53,6 @@ public class NominatimGeocodingClient {
 					.bodyToMono(List.class)
 					.block();
 
-			// #region agent log
-			DebugSessionLog.log("H1", "NominatimGeocodingClient.search", "nominatim raw response", new LinkedHashMap<>(Map.of(
-					"query", query,
-					"language", language,
-					"rawCount", results == null ? -1 : results.size())));
-			// #endregion
-
 			if (results == null || results.isEmpty()) {
 				return List.of();
 			}
@@ -79,25 +71,13 @@ public class NominatimGeocodingClient {
 					.limit(limit)
 					.toList();
 
-			// #region agent log
-			DebugSessionLog.log("H3", "NominatimGeocodingClient.search", "nominatim mapped results", new LinkedHashMap<>(Map.of(
-					"query", query,
-					"mappedCount", mapped.size(),
-					"topName", mapped.isEmpty() ? "" : mapped.getFirst().name())));
-			// #endregion
-
 			return mapped;
 		} catch (Exception ex) {
-			String errorType = ex instanceof WebClientResponseException response
-					? "HTTP_" + response.getStatusCode().value()
-					: ex.getClass().getSimpleName();
-			log.warn("Nominatim geocoding failed for '{}': {}", query, ex.getMessage());
-			// #region agent log
-			DebugSessionLog.log("H2", "NominatimGeocodingClient.search", "nominatim exception", new LinkedHashMap<>(Map.of(
-					"query", query,
-					"error", errorType,
-					"message", String.valueOf(ex.getMessage()))));
-			// #endregion
+			if (ex instanceof WebClientResponseException response) {
+				log.warn("Nominatim geocoding failed for '{}': HTTP {}", query, response.getStatusCode().value());
+			} else {
+				log.warn("Nominatim geocoding failed for '{}': {}", query, ex.getMessage());
+			}
 			return List.of();
 		}
 	}

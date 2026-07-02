@@ -58,7 +58,6 @@ public class PopularDestinationsTemplateEngine {
 			String country,
 			String placeType,
 			String unsplashPhotoId) {
-		String photoUrl = UNSPLASH + "/" + unsplashPhotoId + "?ixlib=rb-4.1.0&auto=format&fit=crop&w=720&q=80";
-		return new PopularDestinationSuggestion(name, country, placeType, photoUrl);
+		return new PopularDestinationSuggestion(name, country, placeType);
 	}
 }

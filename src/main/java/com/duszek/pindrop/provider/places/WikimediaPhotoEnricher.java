@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,14 +21,8 @@ public class WikimediaPhotoEnricher {
 		if (name == null || name.isBlank()) {
 			return Optional.empty();
 		}
-		String searchTerm = country != null && !country.isBlank() ? name + " " + country : name;
-		return findPhotoUrl(searchTerm);
-	}
 
-	public Optional<String> findPhotoUrl(String searchTerm) {
-		if (searchTerm == null || searchTerm.isBlank()) {
-			return Optional.empty();
-		}
+		String searchTerm = country != null && !country.isBlank() ? name + " " + country : name;
 		try {
 			@SuppressWarnings("unchecked")
 			Map<String, Object> response = webClient.get()
@@ -37,7 +32,7 @@ public class WikimediaPhotoEnricher {
 							.queryParam("format", "json")
 							.queryParam("generator", "search")
 							.queryParam("gsrsearch", searchTerm)
-							.queryParam("gsrlimit", 5)
+							.queryParam("gsrlimit", 1)
 							.queryParam("prop", "pageimages")
 							.queryParam("piprop", "thumbnail")
 							.queryParam("pithumbsize", 720)
@@ -46,7 +41,7 @@ public class WikimediaPhotoEnricher {
 					.bodyToMono(Map.class)
 					.block();
 
-			return extractBestThumbnail(response);
+			return extractThumbnail(response);
 		} catch (Exception ex) {
 			log.debug("Wikimedia photo lookup failed for '{}': {}", searchTerm, ex.getMessage());
 			return Optional.empty();
@@ -54,7 +49,7 @@ public class WikimediaPhotoEnricher {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Optional<String> extractBestThumbnail(Map<String, Object> response) {
+	private Optional<String> extractThumbnail(Map<String, Object> response) {
 		if (response == null) {
 			return Optional.empty();
 		}
@@ -76,7 +71,7 @@ public class WikimediaPhotoEnricher {
 				Object source = thumbnailMap.get("source");
 				if (source != null) {
 					String url = String.valueOf(source).trim();
-					if (!url.isBlank() && !PhotoUrlValidator.isLikelyMapImage(url)) {
+					if (!url.isBlank()) {
 						return Optional.of(url);
 					}
 				}

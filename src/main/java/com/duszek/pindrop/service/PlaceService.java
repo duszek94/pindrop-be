@@ -6,15 +6,12 @@ import com.duszek.pindrop.provider.places.NominatimGeocodingClient;
 import com.duszek.pindrop.provider.places.PlacePhotoEnricher;
 import com.duszek.pindrop.provider.places.PlaceSearchProvider;
 import com.duszek.pindrop.provider.places.PlaceSearchResult;
-import com.duszek.pindrop.util.DebugSessionLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -32,14 +29,6 @@ public class PlaceService {
 				.map(place -> placeLocalizationService.localizeForSearch(place, language))
 				.map(this::toResponse)
 				.toList();
-
-		// #region agent log
-		DebugSessionLog.log("H5", "PlaceService.search", "place search response", new LinkedHashMap<>(Map.of(
-				"query", query,
-				"language", language,
-				"resultCount", response.size(),
-				"topName", response.isEmpty() ? "" : response.getFirst().getName())));
-		// #endregion
 
 		return response;
 	}

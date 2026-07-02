@@ -1,5 +1,6 @@
 package com.duszek.pindrop.controller;
 
+import com.duszek.pindrop.dto.planning.InterestSuggestionResponse;
 import com.duszek.pindrop.dto.planning.SelectProposalRequest;
 import com.duszek.pindrop.dto.planning.TripItineraryResponse;
 import com.duszek.pindrop.dto.planning.TripProposalResponse;
@@ -42,6 +43,11 @@ public class TripPlanningController {
 			@PathVariable Long tripId,
 			@Valid @RequestBody UpdatePreferencesRequest request) {
 		tripPlanningService.updatePreferences(SecurityUtils.getCurrentUserId(), tripId, request);
+	}
+
+	@GetMapping("/wizard/interest-suggestions")
+	public List<InterestSuggestionResponse> getInterestSuggestions(@PathVariable Long tripId) {
+		return tripPlanningService.getInterestSuggestions(SecurityUtils.getCurrentUserId(), tripId);
 	}
 
 	@PatchMapping("/wizard/interests")

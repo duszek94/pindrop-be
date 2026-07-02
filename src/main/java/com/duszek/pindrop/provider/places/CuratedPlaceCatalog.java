@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-final class CuratedPlaceCatalog {
+public final class CuratedPlaceCatalog {
 
 	private record CuratedEntry(
 			String name,
@@ -35,10 +35,11 @@ final class CuratedPlaceCatalog {
 			entry("Amalfi Coast", "Campania", "Italy", "it", 40.634, 14.602, "region", "amalfi"),
 			entry("Cappadocia", "Nevşehir", "Turkey", "tr", 38.643, 34.829, "region", "cappadocia"),
 			entry("Patagonia", "Santa Cruz", "Argentina", "ar", -49.331, -72.886, "region", "patagonia"),
+			entry("Niagara Falls", "Ontario", "Canada", "ca", 43.090, -79.085, "region", "niagara"),
 			entry("Lapland", "Lapland", "Finland", "fi", 67.922, 26.505, "region", "lapland"),
 			entry("Banff", "Alberta", "Canada", "ca", 51.178, -115.572, "region", "banff"),
 			entry("New England", "Massachusetts", "United States", "us", 42.360, -71.058, "region", "england"),
-			entry("Santorini", "South Aegean", "Greece", "gr", 36.393, 25.461, "city", "santorini"),
+			entry("Santorini", "South Aegean", "Greece", "gr", 36.393, 25.461, "city", "santorini", "thira"),
 			entry("Bali", "Bali", "Indonesia", "id", -8.409, 115.188, "city", "bali"),
 			entry("Barcelona", "Catalonia", "Spain", "es", 41.387, 2.168, "city", "barcelona"),
 			entry("Kyoto", "Kyoto Prefecture", "Japan", "jp", 35.011, 135.768, "city", "kyoto"),
@@ -73,6 +74,50 @@ final class CuratedPlaceCatalog {
 				.map(item -> item.entry.toPlaceSearchResult())
 				.limit(limit)
 				.toList();
+	}
+
+	private static boolean countryMatches(String placeCountry, String targetCountry) {
+		if (targetCountry == null || targetCountry.isBlank()) {
+			return true;
+		}
+		if (placeCountry == null) {
+			return false;
+		}
+		String normalizedPlace = placeCountry.toLowerCase(Locale.ROOT);
+		String normalizedTarget = targetCountry.toLowerCase(Locale.ROOT);
+		if (normalizedPlace.contains(normalizedTarget) || normalizedTarget.contains(normalizedPlace)) {
+			return true;
+		}
+		return countryAliases(normalizedTarget).stream().anyMatch(normalizedPlace::contains);
+	}
+
+	private static List<String> countryAliases(String country) {
+		return switch (country) {
+			case "united states", "usa", "us" -> List.of("united states", "usa");
+			case "united kingdom", "uk", "great britain" -> List.of("united kingdom", "great britain", "scotland");
+			case "greece", "hellas" -> List.of("greece", "hellas", "elláda");
+			case "spain", "españa" -> List.of("spain", "españa");
+			case "italy", "italia" -> List.of("italy", "italia");
+			case "switzerland", "schweiz", "suisse" -> List.of("switzerland", "schweiz", "suisse", "svizzera");
+			case "poland", "polska" -> List.of("poland", "polska");
+			case "indonesia" -> List.of("indonesia");
+			case "canada" -> List.of("canada");
+			case "argentina" -> List.of("argentina");
+			default -> List.of(country);
+		};
+	}
+
+	public static PlaceSearchResult findForSuggestion(String name, String country) {
+		if (name == null || name.isBlank()) {
+			return null;
+		}
+
+		String targetCountry = country != null ? country.toLowerCase(Locale.ROOT) : "";
+		return search(name, 5).stream()
+				.filter(place -> countryMatches(place.country(), targetCountry))
+				.filter(place -> PopularDestinationNameValidator.isTravelerFriendlyName(place.name()))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private static int scoreEntry(CuratedEntry entry, String normalized) {

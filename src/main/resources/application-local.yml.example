@@ -17,3 +17,5 @@ app:
   jwt:
     # Base64-encoded 256-bit key for local dev only
     secret: cGluZHJvcC1kZXYtc2VjcmV0LWtleS0yNTZiaXRzISE=
+  weather:
+    api-key: your-openweather-api-key

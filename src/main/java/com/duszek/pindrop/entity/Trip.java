@@ -46,6 +46,9 @@ public class Trip {
 
 	private String destination;
 
+	@Column(name = "place_type")
+	private String placeType;
+
 	private Double lat;
 
 	private Double lng;

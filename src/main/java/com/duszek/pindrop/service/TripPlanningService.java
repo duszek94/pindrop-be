@@ -1,5 +1,6 @@
 package com.duszek.pindrop.service;
 
+import com.duszek.pindrop.dto.planning.InterestSuggestionResponse;
 import com.duszek.pindrop.dto.planning.PreferenceProfile;
 import com.duszek.pindrop.dto.planning.SelectProposalRequest;
 import com.duszek.pindrop.dto.planning.TripItineraryResponse;
@@ -9,7 +10,9 @@ import com.duszek.pindrop.dto.planning.UpdateInterestsRequest;
 import com.duszek.pindrop.dto.planning.UpdatePreferencesRequest;
 import com.duszek.pindrop.entity.ProposalType;
 import com.duszek.pindrop.entity.Trip;
+import com.duszek.pindrop.entity.TripInterest;
 import com.duszek.pindrop.entity.TripStatus;
+import com.duszek.pindrop.exception.BadRequestException;
 import com.duszek.pindrop.repository.TripItineraryActivityRepository;
 import com.duszek.pindrop.repository.TripRepository;
 import com.duszek.pindrop.util.PreferenceProfileUtils;
@@ -18,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -27,6 +31,7 @@ public class TripPlanningService {
 	private final TripRepository tripRepository;
 	private final TripItineraryActivityRepository tripItineraryActivityRepository;
 	private final ItineraryGenerationService itineraryGenerationService;
+	private final InterestSuggestionService interestSuggestionService;
 
 	@Transactional
 	public void updateDestination(Long userId, Long tripId, UpdateDestinationRequest request) {
@@ -34,6 +39,7 @@ public class TripPlanningService {
 		TripUtils.validateDateRange(request.getStartDate(), request.getEndDate());
 
 		trip.setDestination(request.getDestination());
+		trip.setPlaceType(request.getPlaceType());
 		trip.setLat(request.getLat());
 		trip.setLng(request.getLng());
 		trip.setStartDate(request.getStartDate());
@@ -55,10 +61,36 @@ public class TripPlanningService {
 		tripRepository.save(trip);
 	}
 
+	@Transactional(readOnly = true)
+	public List<InterestSuggestionResponse> getInterestSuggestions(Long userId, Long tripId) {
+		Trip trip = itineraryGenerationService.loadOwnedTrip(userId, tripId);
+		if (trip.getDestination() == null || trip.getDestination().isBlank()) {
+			throw new BadRequestException("Destination is required");
+		}
+		if (trip.getPreferenceProfile() == null) {
+			throw new BadRequestException("Preferences are required");
+		}
+		return interestSuggestionService.suggest(trip);
+	}
+
 	@Transactional
 	public void updateInterests(Long userId, Long tripId, UpdateInterestsRequest request) {
 		Trip trip = itineraryGenerationService.loadOwnedTrip(userId, tripId);
-		trip.setInterests(request.getInterests() != null ? request.getInterests() : List.of());
+		List<String> interests = request.getInterests() != null ? request.getInterests() : List.of();
+		if (interests.isEmpty() || interests.size() > 3) {
+			throw new BadRequestException("Select between 1 and 3 interests");
+		}
+
+		List<String> validated = new ArrayList<>(interests.size());
+		for (String interest : interests) {
+			TripInterest parsed = TripInterest.fromName(interest);
+			if (parsed == null) {
+				throw new BadRequestException("Unknown interest: " + interest);
+			}
+			validated.add(parsed.name());
+		}
+
+		trip.setInterests(validated);
 		tripRepository.save(trip);
 	}
 

@@ -14,6 +14,8 @@ public class UpdateDestinationRequest {
 	@NotBlank
 	private String destination;
 
+	private String placeType;
+
 	@NotNull
 	private Double lat;
 
